@@ -17,11 +17,6 @@ namespace Hangman
         private List<bool> CityMask;
         private int Lives;
 
-        public HangmanGame()
-        {
-            CountriesAndCities = LoadCountriesAndCities();
-        }
-
         private List<(string, string)> LoadCountriesAndCities()
         {
             return new List<(string, string)> { ("Poland", "Warsaw") };
@@ -30,6 +25,7 @@ namespace Hangman
 
         public void Play()
         {
+            CountriesAndCities = LoadCountriesAndCities();
             if (CountriesAndCities.Count == 0)
             {
                 Console.WriteLine("Sorry, there are no city names to guess.");
