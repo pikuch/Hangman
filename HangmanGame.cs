@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,28 +15,68 @@ namespace Hangman
         private const char MaskCharacter = '_';
         private const char LivesCharacter = '♥';
 
-        private Random random = new Random();
+        private const string FileNameCountriesAndCapitals = ".\\countries_and_capitals.txt";
 
-        private List<(string, string)> CountriesAndCities;
+        private readonly Random random = new Random();
 
-        private string CurrentCity;
+        private List<(string, string)> CountriesAndCapitals;
+
+        private string CurrentCapital;
         private string CurrentCountry;
         private List<bool> CityMask;
         private List<char> NotInWordList;
         private int Lives;
         private bool PlayerWon;
 
-        private List<(string, string)> LoadCountriesAndCities()
+        private List<(string, string)> LoadCountriesAndCapitals()
         {
-            return new List<(string, string)> { ("Poland", "Warsaw") };
-            // TODO: actually load data from the file
+            string line;
+            string corruptLineMessage = "Found a corrupt line in the input file, skipping.";
+            List<(string, string)> outputList = new List<(string, string)>();
+
+            try
+            {
+                using (StreamReader inputStream = new StreamReader(FileNameCountriesAndCapitals))
+                {
+                    while ((line = inputStream.ReadLine()) != null)
+                    {
+                        string[] items = line.Split('|');
+                        if (items.Length != 2)
+                        {
+                            Console.WriteLine(corruptLineMessage);
+                        }
+                        else
+                        {
+                            string country = items[0].Trim();
+                            string capital = items[1].Trim();
+                            if (country.Length == 0 || capital.Length == 0)
+                            {
+                                Console.WriteLine(corruptLineMessage);
+                            }
+                            else
+                            {
+                                outputList.Add((country, capital));
+                            }
+                        }
+                    }
+
+                }
+                return outputList;
+
+            }
+            catch (IOException)
+            {
+                Console.WriteLine("Failed to open the file with countries and capitals.");
+                return new List<(string, string)>();
+            }
+
         }
 
         public void Play()
         {
             // Early exit if there are no cities to choose from - might need another action
-            CountriesAndCities = LoadCountriesAndCities();
-            if (CountriesAndCities.Count == 0)
+            CountriesAndCapitals = LoadCountriesAndCapitals();
+            if (CountriesAndCapitals.Count == 0)
             {
                 Console.WriteLine("Sorry, there are no city names to guess.");
                 return;
@@ -51,7 +92,8 @@ namespace Hangman
                     if (guessTheWholeWord)
                     {
                         JudgeWordInput(GetWordInput());
-                    } else
+                    }
+                    else
                     {
                         JudgeLetterInput(GetLetterInput());
                     }
@@ -59,7 +101,8 @@ namespace Hangman
                 if (PlayerWon)
                 {
                     DisplaySuccess();
-                } else
+                }
+                else
                 {
                     DisplayFailure();
                 }
@@ -73,14 +116,14 @@ namespace Hangman
         private void DisplaySuccess()
         {
             Console.Clear();
-            Console.WriteLine("Congratulations! You won!");
+            Console.WriteLine($"Congratulations! You won! The capital was {CurrentCapital}");
             Console.WriteLine("Press any key to continue");
             Console.ReadKey(true);
         }
         private void DisplayFailure()
         {
             Console.Clear();
-            Console.WriteLine($"You lost! The city was {CurrentCity}");
+            Console.WriteLine($"You lost! The capital was {CurrentCapital}");
             Console.WriteLine("Press any key to continue");
             Console.ReadKey(true);
         }
@@ -118,17 +161,22 @@ namespace Hangman
         {
             char chosenUpperLetter = char.ToUpper(chosenLetter);
 
-            if (CurrentCity.ToUpper().Contains(chosenUpperLetter))
+            if (CurrentCapital.ToUpper().Contains(chosenUpperLetter))
             {
-                for (int i=0; i<CurrentCity.Length; i++)
+                for (int i=0; i<CurrentCapital.Length; i++)
                 {
-                    if (char.ToUpper(CurrentCity[i]) == chosenUpperLetter)
+                    if (char.ToUpper(CurrentCapital[i]) == chosenUpperLetter)
                     {
                         CityMask[i] = false;
                     }
                 }
+                if (CityMask.All(x => !x))
+                {
+                    PlayerWon = true;
+                }
 
-            } else
+            }
+            else
             {
                 if (NotInWordList.Contains(chosenUpperLetter) == false)
                 {
@@ -140,11 +188,12 @@ namespace Hangman
 
         private void JudgeWordInput(string chosenWord)
         {
-            if (chosenWord.ToUpper() == CurrentCity.ToUpper())
+            if (chosenWord.ToUpper() == CurrentCapital.ToUpper())
             {
-                CityMask = Enumerable.Repeat(false, CurrentCity.Length).ToList();
+                CityMask = Enumerable.Repeat(false, CurrentCapital.Length).ToList();
                 PlayerWon = true;
-            } else
+            }
+            else
             {
                 Lives -= WordPenalty;
             }
@@ -192,7 +241,8 @@ namespace Hangman
                 if (input.Length != 1)
                 {
                     displayClarification = true;
-                } else
+                }
+                else
                 {
                     return input[0];
                 }
@@ -216,10 +266,12 @@ namespace Hangman
                 if (char.ToUpper(pressed) == 'L')
                 {
                     return false;
-                } else if (char.ToUpper(pressed) == 'W')
+                }
+                else if (char.ToUpper(pressed) == 'W')
                 {
                     return true;
-                } else
+                }
+                else
                 {
                     displayClarification = true;
                 }
@@ -240,7 +292,8 @@ namespace Hangman
             if (Lives < ShowHintWhenBelowThisManyLives)
             {
                 Console.WriteLine($"Hint: it's the capital of {CurrentCountry}");
-            } else
+            }
+            else
             {
                 Console.WriteLine();
             }
@@ -269,8 +322,8 @@ namespace Hangman
         private void DisplayMaskedCity()
         {
             Console.WriteLine("Guess the capital city:");
-            StringBuilder hiddenCityName = new StringBuilder(CurrentCity.Length * 2);
-            for (int i=0; i<CurrentCity.Length; i++)
+            StringBuilder hiddenCityName = new StringBuilder(CurrentCapital.Length * 2);
+            for (int i=0; i<CurrentCapital.Length; i++)
             {
                 if (CityMask[i])
                 {
@@ -278,7 +331,7 @@ namespace Hangman
                 }
                 else
                 {
-                    hiddenCityName.Append(CurrentCity[i]);
+                    hiddenCityName.Append(CurrentCapital[i]);
                 }
                 hiddenCityName.Append(" ");
             }
@@ -287,12 +340,12 @@ namespace Hangman
 
         private void ResetTheGame()
         {
-            int cityIndex = random.Next(CountriesAndCities.Count);
-            (CurrentCountry, CurrentCity) = CountriesAndCities[cityIndex];
+            int cityIndex = random.Next(CountriesAndCapitals.Count);
+            (CurrentCountry, CurrentCapital) = CountriesAndCapitals[cityIndex];
 
             Lives = MaxLives;
             PlayerWon = false;
-            CityMask = Enumerable.Repeat(true, CurrentCity.Length).ToList();
+            CityMask = Enumerable.Repeat(true, CurrentCapital.Length).ToList();
             NotInWordList = new List<char>();
         }
     }
