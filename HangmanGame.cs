@@ -34,6 +34,51 @@ namespace Hangman
         private int GuessCount;
         private readonly Stopwatch Timer = new Stopwatch();
 
+        public void Play()
+        {
+            // Early exit if there are no cities to choose from - might need another action
+            LoadCountriesAndCapitals();
+            if (CountriesAndCapitals.Count == 0)
+            {
+                Console.WriteLine("Sorry, there are no city names to guess.");
+                return;
+            }
+
+            // Play the game until the player decides to quit
+            while (true)
+            {
+                ResetTheGame();
+                while (Lives > 0 && !PlayerWon)
+                {
+                    bool guessTheWholeWord = GetInputType();
+                    if (guessTheWholeWord)
+                    {
+                        JudgeWordInput(GetWordInput());
+                    }
+                    else
+                    {
+                        JudgeLetterInput(GetLetterInput());
+                    }
+                    GuessCount++;
+                }
+                Timer.Stop();
+
+                if (PlayerWon)
+                {
+                    DisplaySuccess();
+                    UpdateHighscores();
+                }
+                else
+                {
+                    DisplayFailure();
+                }
+                if (PlayerWantsToExit())
+                {
+                    break;
+                }
+            }
+        }
+
         private void LoadCountriesAndCapitals()
         {
             int corruptRecords = 0;
@@ -125,52 +170,6 @@ namespace Hangman
             catch (IOException e)
             {
                 Console.WriteLine($"Failed to write highscores to a file. Reason: {e.Message}");
-            }
-        }
-
-
-        public void Play()
-        {
-            // Early exit if there are no cities to choose from - might need another action
-            LoadCountriesAndCapitals();
-            if (CountriesAndCapitals.Count == 0)
-            {
-                Console.WriteLine("Sorry, there are no city names to guess.");
-                return;
-            }
-
-            // Play the game until the player decides to quit
-            while (true)
-            {
-                ResetTheGame();
-                while (Lives > 0 && !PlayerWon)
-                {
-                    bool guessTheWholeWord = GetInputType();
-                    if (guessTheWholeWord)
-                    {
-                        JudgeWordInput(GetWordInput());
-                    }
-                    else
-                    {
-                        JudgeLetterInput(GetLetterInput());
-                    }
-                    GuessCount++;
-                }
-                Timer.Stop();
-
-                if (PlayerWon)
-                {
-                    DisplaySuccess();
-                    UpdateHighscores();
-                }
-                else
-                {
-                    DisplayFailure();
-                }
-                if (PlayerWantsToExit())
-                {
-                    break;
-                }
             }
         }
 
@@ -302,7 +301,6 @@ namespace Hangman
             bool displayClarification = false;
             while (true)
             {
-                Display();
                 Console.WriteLine("Write your name:");
                 if (displayClarification)
                 {
