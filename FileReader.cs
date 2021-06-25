@@ -22,9 +22,9 @@ namespace Hangman
                     }
                 }
             }
-            catch (IOException)
+            catch (IOException e)
             {
-                Console.WriteLine($"Failed to open the file {filename}.");
+                Console.WriteLine($"Failed to open the file {filename}. Reason: {e.Message}");
             }
 
             return records;

@@ -1,8 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Linq;
+using System.IO;
 
 namespace Hangman
 {
@@ -16,10 +17,12 @@ namespace Hangman
         private const char LivesCharacter = '♥';
 
         private const string FileNameCountriesAndCapitals = ".\\countries_and_capitals.txt";
+        private const string FileNameHighscores = ".\\highscores.txt";
 
         private readonly Random random = new Random();
 
         private List<(string, string)> CountriesAndCapitals;
+        private List<HighscoreRecord> Highscores;
 
         private string CurrentCapital;
         private string CurrentCountry;
@@ -31,10 +34,10 @@ namespace Hangman
         private int GuessCount;
         private readonly Stopwatch Timer = new Stopwatch();
 
-        private List<(string, string)> LoadCountriesAndCapitals()
+        private void LoadCountriesAndCapitals()
         {
-            string corruptLineMessage = "Found a corrupt line in the input file, skipping.";
-            List<(string, string)> outputList = new List<(string, string)>();
+            int corruptRecords = 0;
+            CountriesAndCapitals = new List<(string, string)>();
 
             List<string[]> records = new FileReader().Read(FileNameCountriesAndCapitals);    
             
@@ -42,7 +45,7 @@ namespace Hangman
             {
                 if (line.Length != 2)
                 {
-                    Console.WriteLine(corruptLineMessage);
+                    corruptRecords++;
                 }
                 else
                 {
@@ -50,21 +53,86 @@ namespace Hangman
                     string capital = line[1].Trim();
                     if (country.Length == 0 || capital.Length == 0)
                     {
-                        Console.WriteLine(corruptLineMessage);
+                        corruptRecords++;
                     }
                     else
                     {
-                        outputList.Add((country, capital));
+                        CountriesAndCapitals.Add((country, capital));
                     }
                 }
             }
-            return outputList;
+            if (corruptRecords > 0)
+            {
+                Console.WriteLine($"Found {corruptRecords} corrupt record(s) in the input file.");
+                Console.WriteLine("Press any key to continue...");
+                Console.ReadKey(true);
+            }
         }
+
+        private void LoadHighscores()
+        {
+            int corruptRecords = 0;
+            Highscores = new List<HighscoreRecord>();
+
+            List<string[]> records = new FileReader().Read(FileNameHighscores);
+
+            foreach (string[] line in records)
+            {
+                if (line.Length != 5)
+                {
+                    corruptRecords++;
+                }
+                else
+                {
+                    int tries;
+                    if (int.TryParse(line[3].Trim(), out tries) == false)
+                    {
+                        corruptRecords++;
+                        break;
+                    }
+                    HighscoreRecord highscore = new HighscoreRecord
+                    {
+                        Name = line[0].Trim(),
+                        Date = line[1].Trim(),
+                        GuessingTime = line[2].Trim(),
+                        GuessingTries = tries,
+                        GuessedWord = line[4].Trim()
+                    };
+                    Highscores.Add(highscore);
+                }
+            }
+            if (corruptRecords > 0)
+            {
+                Console.WriteLine($"Found {corruptRecords} corrupt record(s) in the highscores file.");
+                Console.WriteLine("Press any key to continue...");
+                Console.ReadKey(true);
+            }
+
+        }
+
+        private void SaveHighscores()
+        {
+            try
+            {
+                using (StreamWriter outputStream = new StreamWriter(FileNameHighscores))
+                {
+                    for (int i=0; i<Math.Min(10, Highscores.Count); i++)
+                    {
+                        outputStream.WriteLine(Highscores[i].ToString());
+                    }
+                }
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine($"Failed to write highscores to a file. Reason: {e.Message}");
+            }
+        }
+
 
         public void Play()
         {
             // Early exit if there are no cities to choose from - might need another action
-            CountriesAndCapitals = LoadCountriesAndCapitals();
+            LoadCountriesAndCapitals();
             if (CountriesAndCapitals.Count == 0)
             {
                 Console.WriteLine("Sorry, there are no city names to guess.");
@@ -93,6 +161,7 @@ namespace Hangman
                 if (PlayerWon)
                 {
                     DisplaySuccess();
+                    UpdateHighscores();
                 }
                 else
                 {
@@ -103,6 +172,40 @@ namespace Hangman
                     break;
                 }
             }
+        }
+
+        private void UpdateHighscores()
+        {
+            string playerName = GetPlayerName();
+            HighscoreRecord currentRecord = new HighscoreRecord
+            {
+                Name = playerName,
+                Date = DateTime.Today.ToString("d"),
+                GuessedWord = CurrentCapital,
+                GuessingTime = Timer.Elapsed.TotalSeconds.ToString("0.00"),
+                GuessingTries = GuessCount
+            };
+            LoadHighscores();
+            Highscores.Add(currentRecord);
+            Highscores = Highscores.OrderBy(x => x.GuessingTries)
+                                    .ThenBy(x => x.GuessingTime)
+                                    .ThenBy(x => x.Date)
+                                    .ToList();
+            DisplayHighscores();
+            SaveHighscores();
+        }
+
+        private void DisplayHighscores()
+        {
+            Console.Clear();
+            Console.WriteLine("Highscores:");
+            Console.WriteLine("Player | Date | Guessing Time | Guessing Tries | Capital");
+            foreach (var highscore in Highscores)
+            {
+                Console.WriteLine(highscore.ToString());
+            }
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadKey(true);
         }
 
         private void DisplaySuccess()
@@ -192,6 +295,31 @@ namespace Hangman
             }
         }
 
+        private string GetPlayerName()
+        {
+            string input;
+            string clarification = "Please write at least one letter.";
+            bool displayClarification = false;
+            while (true)
+            {
+                Display();
+                Console.WriteLine("Write your name:");
+                if (displayClarification)
+                {
+                    Console.WriteLine(clarification);
+                }
+                input = Console.ReadLine();
+                if (input.Length == 0 || input.Trim().Length == 0)
+                {
+                    displayClarification = true;
+                }
+                else
+                {
+                    return input;
+                }
+            }
+        }
+
         private string GetWordInput()
         {
             string input;
@@ -206,7 +334,7 @@ namespace Hangman
                     Console.WriteLine(clarification);
                 }
                 input = Console.ReadLine();
-                if (input.Length == 0)
+                if (input.Length == 0 || input.Trim().Length == 0)
                 {
                     displayClarification = true;
                 }
