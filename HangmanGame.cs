@@ -29,7 +29,7 @@ namespace Hangman
         private bool PlayerWon;
 
         private int GuessCount;
-        private Stopwatch Timer = new Stopwatch();
+        private readonly Stopwatch Timer = new Stopwatch();
 
         private List<(string, string)> LoadCountriesAndCapitals()
         {
@@ -103,6 +103,7 @@ namespace Hangman
                     GuessCount++;
                 }
                 Timer.Stop();
+
                 if (PlayerWon)
                 {
                     DisplaySuccess();
@@ -176,7 +177,7 @@ namespace Hangman
                         CityMask[i] = false;
                     }
                 }
-                if (AllLettersDiscovered())
+                if (Helpers.IsMaskClear(CityMask))
                 {
                     PlayerWon = true;
                 }
@@ -196,7 +197,7 @@ namespace Hangman
         {
             if (chosenWord.ToUpper() == CurrentCapital.ToUpper())
             {
-                CityMask = MakeMaskFromString(CurrentCapital);
+                CityMask = Helpers.MakeMaskFromString(CurrentCapital);
                 PlayerWon = true;
             }
             else
@@ -351,33 +352,12 @@ namespace Hangman
 
             Lives = MaxLives;
             PlayerWon = false;
-            CityMask = MakeMaskFromString(CurrentCapital);
+            CityMask = Helpers.MakeMaskFromString(CurrentCapital);
             NotInWordList = new List<char>();
             GuessCount = 0;
             Timer.Reset();
             Timer.Start();
         }
 
-        private bool[] MakeMaskFromString(string capital)
-        {
-            bool[] mask = new bool[capital.Length];
-            for (int i = 0; i < capital.Length; i++)
-            {
-                mask[i] = (capital[i] != ' ');
-            }
-            return mask;
-        }
-
-        private bool AllLettersDiscovered()
-        {
-            foreach (bool place in CityMask)
-            {
-                if (place)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
     }
 }
