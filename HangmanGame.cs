@@ -33,46 +33,32 @@ namespace Hangman
 
         private List<(string, string)> LoadCountriesAndCapitals()
         {
-            string line;
             string corruptLineMessage = "Found a corrupt line in the input file, skipping.";
             List<(string, string)> outputList = new List<(string, string)>();
 
-            try
+            List<string[]> records = new FileReader().Read(FileNameCountriesAndCapitals);    
+            
+            foreach (string[] line in records)
             {
-                using (StreamReader inputStream = new StreamReader(FileNameCountriesAndCapitals))
+                if (line.Length != 2)
                 {
-                    while ((line = inputStream.ReadLine()) != null)
-                    {
-                        string[] items = line.Split('|');
-                        if (items.Length != 2)
-                        {
-                            Console.WriteLine(corruptLineMessage);
-                        }
-                        else
-                        {
-                            string country = items[0].Trim();
-                            string capital = items[1].Trim();
-                            if (country.Length == 0 || capital.Length == 0)
-                            {
-                                Console.WriteLine(corruptLineMessage);
-                            }
-                            else
-                            {
-                                outputList.Add((country, capital));
-                            }
-                        }
-                    }
-
+                    Console.WriteLine(corruptLineMessage);
                 }
-                return outputList;
-
+                else
+                {
+                    string country = line[0].Trim();
+                    string capital = line[1].Trim();
+                    if (country.Length == 0 || capital.Length == 0)
+                    {
+                        Console.WriteLine(corruptLineMessage);
+                    }
+                    else
+                    {
+                        outputList.Add((country, capital));
+                    }
+                }
             }
-            catch (IOException)
-            {
-                Console.WriteLine("Failed to open the file with countries and capitals.");
-                return new List<(string, string)>();
-            }
-
+            return outputList;
         }
 
         public void Play()
