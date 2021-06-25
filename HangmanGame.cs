@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 
 namespace Hangman
 {
@@ -28,6 +29,7 @@ namespace Hangman
         private bool PlayerWon;
 
         private int GuessCount;
+        private Stopwatch Timer = new Stopwatch();
 
         private List<(string, string)> LoadCountriesAndCapitals()
         {
@@ -100,6 +102,7 @@ namespace Hangman
                     }
                     GuessCount++;
                 }
+                Timer.Stop();
                 if (PlayerWon)
                 {
                     DisplaySuccess();
@@ -119,7 +122,7 @@ namespace Hangman
         {
             Console.Clear();
             Console.WriteLine($"Congratulations! You won! The capital was {CurrentCapital}.");
-            Console.WriteLine($"It took you {GuessCount} guesses.");
+            Console.WriteLine($"It took you {GuessCount} guesses and {Timer.Elapsed.TotalSeconds:0.00} seconds.");
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey(true);
         }
@@ -338,7 +341,7 @@ namespace Hangman
                 }
                 hiddenCityName.Append(" ");
             }
-            Console.WriteLine(hiddenCityName.ToString());
+            Console.WriteLine("\n" + hiddenCityName.ToString() + "\n");
         }
 
         private void ResetTheGame()
@@ -351,6 +354,8 @@ namespace Hangman
             CityMask = MakeMaskFromString(CurrentCapital);
             NotInWordList = new List<char>();
             GuessCount = 0;
+            Timer.Reset();
+            Timer.Start();
         }
 
         private bool[] MakeMaskFromString(string capital)
