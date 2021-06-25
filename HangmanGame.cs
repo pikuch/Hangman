@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace Hangman
@@ -23,10 +22,12 @@ namespace Hangman
 
         private string CurrentCapital;
         private string CurrentCountry;
-        private List<bool> CityMask;
+        private bool[] CityMask;
         private List<char> NotInWordList;
         private int Lives;
         private bool PlayerWon;
+
+        private int GuessCount;
 
         private List<(string, string)> LoadCountriesAndCapitals()
         {
@@ -97,6 +98,7 @@ namespace Hangman
                     {
                         JudgeLetterInput(GetLetterInput());
                     }
+                    GuessCount++;
                 }
                 if (PlayerWon)
                 {
@@ -116,15 +118,16 @@ namespace Hangman
         private void DisplaySuccess()
         {
             Console.Clear();
-            Console.WriteLine($"Congratulations! You won! The capital was {CurrentCapital}");
-            Console.WriteLine("Press any key to continue");
+            Console.WriteLine($"Congratulations! You won! The capital was {CurrentCapital}.");
+            Console.WriteLine($"It took you {GuessCount} guesses.");
+            Console.WriteLine("Press any key to continue...");
             Console.ReadKey(true);
         }
         private void DisplayFailure()
         {
             Console.Clear();
-            Console.WriteLine($"You lost! The capital was {CurrentCapital}");
-            Console.WriteLine("Press any key to continue");
+            Console.WriteLine($"You lost! The capital was {CurrentCapital}.");
+            Console.WriteLine("Press any key to continue...");
             Console.ReadKey(true);
         }
 
@@ -170,7 +173,7 @@ namespace Hangman
                         CityMask[i] = false;
                     }
                 }
-                if (CityMask.All(x => !x))
+                if (AllLettersDiscovered())
                 {
                     PlayerWon = true;
                 }
@@ -190,7 +193,7 @@ namespace Hangman
         {
             if (chosenWord.ToUpper() == CurrentCapital.ToUpper())
             {
-                CityMask = Enumerable.Repeat(false, CurrentCapital.Length).ToList();
+                CityMask = MakeMaskFromString(CurrentCapital);
                 PlayerWon = true;
             }
             else
@@ -345,8 +348,31 @@ namespace Hangman
 
             Lives = MaxLives;
             PlayerWon = false;
-            CityMask = Enumerable.Repeat(true, CurrentCapital.Length).ToList();
+            CityMask = MakeMaskFromString(CurrentCapital);
             NotInWordList = new List<char>();
+            GuessCount = 0;
+        }
+
+        private bool[] MakeMaskFromString(string capital)
+        {
+            bool[] mask = new bool[capital.Length];
+            for (int i = 0; i < capital.Length; i++)
+            {
+                mask[i] = (capital[i] != ' ');
+            }
+            return mask;
+        }
+
+        private bool AllLettersDiscovered()
+        {
+            foreach (bool place in CityMask)
+            {
+                if (place)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }
